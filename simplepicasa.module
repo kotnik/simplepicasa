@@ -1,0 +1,15 @@
+<?php
+// $Id$
+
+/**
+* Display help and module information
+*/
+function simplepicasa_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case "admin/help#simplepicasa":
+      $output = '<p>'.  t("Help for simple picasa") .'</p>';
+      break;
+  }
+  return $output;
+}

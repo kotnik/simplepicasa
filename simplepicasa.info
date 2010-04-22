@@ -1,0 +1,5 @@
+; $Id$
+name = Simple Picasa
+description = Simple module that displays pictures from Picasa Web gallery
+package = Gallery
+core = 6.x
