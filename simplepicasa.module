@@ -1,9 +1,9 @@
 <?php
 // $Id$
 
-  /**
-   * Display help and module information
-   */
+/**
+ * Display help and module information
+ */
 function simplepicasa_help($path, $arg) {
   $output = '';
   switch ($path) {
@@ -21,28 +21,28 @@ function simplepicasa_help($path, $arg) {
 function simplepicasa_admin() {
   $form = array();
   $form['account'] = array(
-                           '#type' => 'fieldset',
-                           '#title' => t('Required settings'),
+    '#type' => 'fieldset',
+    '#title' => t('Required settings'),
                            );
   $form['account']['simplepicasa_username'] = array(
-                                                    '#type' => 'textfield',
-                                                    '#title' => t('Your Picasa Web username'),
-                                                    '#default_value' => variable_get('simplepicasa_username', ''),
-                                                    '#size' => 35,
-                                                    '#maxlength' => 35,
-                                                    '#description' => t("Please enter your Google Picasa Web username."),
-                                                    '#required' => TRUE,
-                                                    );
+    '#type' => 'textfield',
+    '#title' => t('Your Picasa Web username'),
+    '#default_value' => variable_get('simplepicasa_username', ''),
+    '#size' => 35,
+    '#maxlength' => 35,
+    '#description' => t("Please enter your Google Picasa Web username."),
+    '#required' => TRUE,
+  );
   return system_settings_form($form);
 }
 
 
 function simplepicasa_theme() {
   return array(
-               'picasa_root_album' => array(
-                                            'arguments' => array('albums' => array()),
-                                            ),
-               );
+    'picasa_root_album' => array(
+      'arguments' => array('albums' => array())
+    ),
+  );
 }
 
 
@@ -77,19 +77,19 @@ function onthisdate_perm() {
 function simplepicasa_menu() {
   $items = array();
   $items['admin/settings/simplepicasa'] = array(
-                                                'title' => 'Simple Picasa',
-                                                'description' => 'Settings for Picasa Web module',
-                                                'page callback' => 'drupal_get_form',
-                                                'page arguments' => array('simplepicasa_admin'),
-                                                'access arguments' => array('access administration pages'),
-                                                'type' => MENU_NORMAL_ITEM,
-                                                );
+    'title' => 'Simple Picasa',
+    'description' => 'Settings for Picasa Web module',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('simplepicasa_admin'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_NORMAL_ITEM,
+  );
   $items['picasa_gallery'] = array(
-                                   'title' => 'Picasa Gallery',
-                                   'page callback' => 'simplepicasa_root_album',
-                                   'access arguments' => array('access picasa gallery'),
-                                   'type' => MENU_NORMAL_ITEM,
-                                   );
+    'title' => 'Picasa Gallery',
+    'page callback' => 'simplepicasa_root_album',
+    'access arguments' => array('access picasa gallery'),
+    'type' => MENU_NORMAL_ITEM,
+  );
   return $items;
 }
 
@@ -100,6 +100,9 @@ function simplepicasa_menu() {
 function simplepicasa_root_album() {
   // DEFAULTS
   $picasa_user = variable_get('simplepicasa_username', '');
+
+  if ($picasa_user == '') {
+    return t('Please setup Simple Picasa module first.');
 
   // Request URI
   $file = "http://picasaweb.google.com/data/feed/api/user/" . $picasa_user . "?kind=album";
@@ -176,6 +179,10 @@ function simplepicasa_root_album() {
       $albums[$counter]['num'] = $num;
       $albums[$counter]['published'] = $published;
       unset($thumb);
+      unset($title);
+      unset($href);
+      unset($num);
+      unset($published);
       $counter++;
     }
   }
