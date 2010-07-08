@@ -1,62 +1,185 @@
 <?php
 // $Id$
 
-/**
-* Display help and module information
-*/
+  /**
+   * Display help and module information
+   */
 function simplepicasa_help($path, $arg) {
   $output = '';
   switch ($path) {
-    case "admin/help#simplepicasa":
-      $output = '<p>'.  t("Help for simple picasa") .'</p>';
-      break;
+  case "admin/help#simplepicasa":
+    $output = '<p>'.  t("Help for simple picasa") .'</p>';
+    break;
   }
+  return $output;
+  }
+
+
+/**
+ * Administration settings
+ */
+function simplepicasa_admin() {
+  $form = array();
+  $form['account'] = array(
+                           '#type' => 'fieldset',
+                           '#title' => t('Required settings'),
+                           );
+  $form['account']['simplepicasa_username'] = array(
+                                                    '#type' => 'textfield',
+                                                    '#title' => t('Your Picasa Web username'),
+                                                    '#default_value' => variable_get('simplepicasa_username', ''),
+                                                    '#size' => 35,
+                                                    '#maxlength' => 35,
+                                                    '#description' => t("Please enter your Google Picasa Web username."),
+                                                    '#required' => TRUE,
+                                                    );
+  return system_settings_form($form);
+}
+
+
+function simplepicasa_theme() {
+  return array(
+               'picasa_root_album' => array(
+                                            'arguments' => array('albums' => array()),
+                                            ),
+               );
+}
+
+
+function theme_picasa_root_album($al) {
+  $output = '<div id="simplepicasa">';
+  foreach ($al as $album) {
+    $output .= '<div class="picasa-album">';
+    $output .= '<div class="picasa-thumb">';
+    $output .= '<img src="'.$album['thumb'].'" />';
+    $output .= '</div>';
+    $output .= '<div class="picasa-text">';
+    $output .= $album['title'];
+    $output .= '</div>';
+    $output .= '</div>';
+  }
+  $output .= '</div>';
   return $output;
 }
 
 
 /**
-* Administration settings
-*/
-function simplepicasa_admin() {
-  $form = array();
-  $form['account'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Required settings'),
-  );
-  $form['account']['simplepicasa_username'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Your Picasa Web username'),
-    '#default_value' => variable_get('simplepicasa_username', ''),
-    '#size' => 35,
-    '#maxlength' => 35,
-    '#description' => t("Please enter your Google Picasa Web username."),
-    '#required' => TRUE,
-  );
-  return system_settings_form($form);
-}
-
-
-/**
-* Valid permissions for this module
-*/
+ * Valid permissions for this module
+ */
 function onthisdate_perm() {
   return array('access picasa gallery', 'administer simple picasa');
 }
 
 
 /**
-* Menu for this module
-*/
+ * Menu for this module
+ */
 function simplepicasa_menu() {
   $items = array();
   $items['admin/settings/simplepicasa'] = array(
-    'title' => 'Simple Picasa',
-    'description' => 'Settings for Picasa Web module',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('simplepicasa_admin'),
-    'access arguments' => array('access administration pages'),
-    'type' => MENU_NORMAL_ITEM,
-   );
+                                                'title' => 'Simple Picasa',
+                                                'description' => 'Settings for Picasa Web module',
+                                                'page callback' => 'drupal_get_form',
+                                                'page arguments' => array('simplepicasa_admin'),
+                                                'access arguments' => array('access administration pages'),
+                                                'type' => MENU_NORMAL_ITEM,
+                                                );
+  $items['picasa_gallery'] = array(
+                                   'title' => 'Picasa Gallery',
+                                   'page callback' => 'simplepicasa_root_album',
+                                   'access arguments' => array('access picasa gallery'),
+                                   'type' => MENU_NORMAL_ITEM,
+                                   );
   return $items;
+}
+
+
+/**
+ * Album display list
+ */
+function simplepicasa_root_album() {
+  // DEFAULTS
+  $picasa_user = variable_get('simplepicasa_username', '');
+
+  // Request URI
+  $file = "http://picasaweb.google.com/data/feed/api/user/" . $picasa_user . "?kind=album";
+  // Curl fetch
+  $ch = curl_init();
+  $timeout = 0; // set to zero for no timeout
+  curl_setopt($ch, CURLOPT_URL, $file);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+  $addressData = curl_exec($ch);
+  curl_close($ch);
+  $p = xml_parser_create();
+  xml_parse_into_struct($p, $addressData, $vals, $index);
+  xml_parser_free($p);
+
+  $open_tag = false;
+
+  $albums = array();
+  $counter = 0;
+
+  foreach ($vals as $val) {
+    if (!$open_tag) {
+      if ($val['tag'] == 'ENTRY' && $val['type'] == 'open') {
+        $open_tag = true;
+      }
+    } else {
+      switch ($val['tag']) {
+      case 'ENTRY':
+        if ($var['type'] == 'close')
+          $open_tag = false;
+        break;
+      case 'MEDIA:THUMBNAIL':
+        $thumb = trim($val['attributes']['URL']);
+        break;
+      case 'MEDIA:DESCRIPTION':
+        $desc = trim($val['value']);
+        break;
+      case 'MEDIA:TITLE':
+        $title = trim($val['value']);
+        break;
+      case 'LINK':
+        if ($val['attributes']['REL'] == 'alternate') {
+          $href = trim($val['attributes']['HREF']);
+        }
+        break;
+      case 'GPHOTO:NUMPHOTOS':
+        $num = trim($val['value']);
+        break;
+      case 'GPHOTO:LOCATION':
+        $loc = trim($val['value']);
+        break;
+      case 'PUBLISHED':
+        $published = trim($val['value']);
+        $published = substr($published,0,10);
+        break;
+      case "GPHOTO:ACCESS":
+        $access = trim($val["value"]);
+        if ($access == "protected") {
+          $daccess = "Private";
+        } else {
+          $daccess = "Public";
+        }
+        break;
+      case "GPHOTO:NAME":
+        $picasa_name = trim($val["value"]);
+        break;
+      }
+    }
+
+    if (isset($thumb) && isset($title) && isset($href) && isset($num) && isset($published)) {
+      $albums[$counter]['thumb'] = $thumb;
+      $albums[$counter]['title'] = $title;
+      $albums[$counter]['href'] = $href;
+      $albums[$counter]['num'] = $num;
+      $albums[$counter]['published'] = $published;
+      unset($thumb);
+      $counter++;
+    }
+  }
+
+  $page_content = theme('picasa_root_album', $albums);
+  return $page_content;
 }
