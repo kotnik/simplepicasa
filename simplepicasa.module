@@ -103,6 +103,7 @@ function simplepicasa_root_album() {
 
   if ($picasa_user == '') {
     return t('Please setup Simple Picasa module first.');
+  }
 
   // Request URI
   $file = "http://picasaweb.google.com/data/feed/api/user/" . $picasa_user . "?kind=album";
